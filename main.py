@@ -39,6 +39,8 @@ def button_irq(pin):
     if time.ticks_diff(now, last_press) > 500:
         chandelier_state = not chandelier_state
         chandelier.value(chandelier_state)
+        if 'client' in globals() and client:
+            client.publish(b'chandelier', chandelier_state and b'1' or b'0')
         print("chandelier toggled:", chandelier_state)
         last_press = now
 
