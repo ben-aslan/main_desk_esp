@@ -28,21 +28,22 @@ chandelier.value(0)
 
 chandelier_state = False
 
+button_pressed = False
+
 button = Pin(5, Pin.PULL_UP)
 
 last_press = 0
 
 
 def button_irq(pin):
-    global chandelier_state, last_press
+    global chandelier_state, last_press, button_pressed
     now = time.ticks_ms()
     if time.ticks_diff(now, last_press) > 500:
         chandelier_state = not chandelier_state
         chandelier.value(chandelier_state)
-        if 'client' in globals() and client:
-            client.publish(b'chandelier', chandelier_state and b'1' or b'0')
         print("chandelier toggled:", chandelier_state)
         last_press = now
+        button_pressed = True
 
 
 button.irq(trigger=Pin.IRQ_FALLING, handler=button_irq)
@@ -74,9 +75,12 @@ def connect_wifi():
 
 
 def handle_lamp(msg):
+    global chandelier_state
     if msg == b"1":
+        chandelier_state = True
         chandelier.value(1)
     else:
+        chandelier_state = False
         chandelier.value(0)
     print("lamp:", msg.decode())
 
@@ -135,6 +139,10 @@ for tp in topic_handlers:
     print(f"Subscribed to {tp.decode()}")
 
 while True:
+    if button_pressed:
+        client.publish(b'chandelier', chandelier_state and b'1' or b'0')
+        button_pressed = False
+
     if not wlan.isconnected():
         print("Wi-Fi disconnected. Reconnecting...")
         connect_wifi()
